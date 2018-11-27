@@ -152,12 +152,68 @@ public:
      */
     IMAGEDATA at(size_t row, size_t col);
 
+    /* 
+     * Brief: Convert RGB color space to YIQ color space
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    void RGB2YIQ();
+
+    /* 
+     * Brief: Convert RGB color space to HSI color space
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    void RGB2HSI();
+
+    /* 
+     * Brief: Convert RGB color space to YCbCr color space
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    void RGB2YCbCr();
+
+    /* 
+     * Brief: Convert RGB color space to XYZ color space
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    void RGB2XYZ();
+
+    /* 
+     * Brief: Print color space information
+     * Parameter:
+     *     None
+     * Return:
+     *     color space enum
+     */
+    int getcSpace();
+
 public:
     Ptr_fHeader   fHeader;
     Ptr_iHeader   iHeader;
     Ptr_rgbQuad   rgbQuad;
     Ptr_imageData imageData;
-    int           colorSpace;
+
+private:
+    /* 
+     * Brief: Gamma function used for Convertion from RGB to XYZ color space
+     * Parameter:
+     *     x -- input
+     * Return:
+     *     output
+     */
+    double gammaX(double x);
+private:
+    int colorSpace;
 };
 
 /* 
@@ -207,49 +263,6 @@ void displayColorSpace(const BitMap image, int cSpace = RGB);
  */
 void retrieveComponent(const BitMap& image, int cSpace = RGB);
 
-/* 
- * Brief: Convert RGB color space to YIQ color space
- * Parameter:
- *     image -- source image
- * Return:
- *     None
- */
-void RGB2YIQ(BitMap& image);
 
-/* 
- * Brief: Convert RGB color space to HSI color space
- * Parameter:
- *     image -- source image
- * Return:
- *     None
- */
-void RGB2HSI(BitMap& image);
-
-/* 
- * Brief: Convert RGB color space to YCbCr color space
- * Parameter:
- *     image -- source image
- * Return:
- *     None
- */
-void RGB2YCbCr(BitMap& image);
-
-/* 
- * Brief: Convert RGB color space to XYZ color space
- * Parameter:
- *     image -- source image
- * Return:
- *     None
- */
-void RGB2XYZ(BitMap& image);
-
-/* 
- * Brief: Gamma function used for Convertion from RGB to XYZ color space
- * Parameter:
- *     x -- input
- * Return:
- *     output
- */
-double gammaX(double x);
 
 #endif

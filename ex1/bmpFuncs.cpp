@@ -114,6 +114,113 @@ IMAGEDATA BitMap::at(size_t row, size_t col)
     return imageData[ rowInBmp*iHeader->biWidth + col ];
 }
 
+void BitMap::RGB2YIQ()
+{
+    size_t pixelCounts = (iHeader->biWidth) * (iHeader->biHeight);
+    for(size_t i = 0; i < pixelCounts; ++i)
+    {
+        // Compute Y, I and Q value
+        BYTE Y = BYTE(0.299 * imageData[i].Red + 0.587 * imageData[i].Green + 0.114 * imageData[i].Blue);
+        BYTE I = BYTE(0.596 * imageData[i].Red - 0.275 * imageData[i].Green - 0.321 * imageData[i].Blue);
+        BYTE Q = BYTE(0.212 * imageData[i].Red - 0.523 * imageData[i].Green - 0.311 * imageData[i].Blue);
+
+        // Assign YIQ to RBG
+        imageData[i].Red   = Y;
+        imageData[i].Green = I;
+        imageData[i].Blue  = Q;
+    }
+    colorSpace = YIQ;
+}
+
+void BitMap::RGB2HSI()
+{
+    size_t pixelCounts = (iHeader->biWidth) * (iHeader->biHeight);
+    for(size_t i = 0; i < pixelCounts; ++i)
+    {
+        // Compute r, g and b value
+        int t = imageData[i].Red + imageData[i].Green + imageData[i].Blue;
+        double r = (double)imageData[i].Red   / (double)t;
+        double g = (double)imageData[i].Green / (double)t;
+        double b = (double)imageData[i].Blue  / (double)t;
+
+        // Compute h, s and i value
+        double h = 0;
+        if (b <= g)
+            h = acos( 0.5*(r-g+r-b) / sqrt( (r-g)*(r-g)+(r-b)*(g-b) ) );
+        else
+            h = 2*pi - acos( 0.5*(r-g+r-b) / sqrt( (r-g)*(r-g)+(r-b)*(g-b) ) );
+        double s = 1 - 3 * min( min(r, g), b );
+        double ii = t / (3.0 * 255);
+
+        // Compute H, S and I value
+        BYTE H = BYTE(h * 180 / pi);
+        BYTE S = BYTE(s * 100);
+        BYTE I = BYTE(ii * 255);
+
+        // Assign HSI to RBG
+        imageData[i].Red   = H;
+        imageData[i].Green = S;
+        imageData[i].Blue  = I;
+    }
+    colorSpace = HSI;
+}
+
+void BitMap::RGB2YCbCr()
+{
+    size_t pixelCounts = (iHeader->biWidth) * (iHeader->biHeight);
+    for(size_t i = 0; i < pixelCounts; ++i)
+    {
+        // Compute Y, Cb and Cr value
+        BYTE Y  = BYTE( 0.299 * imageData[i].Red + 0.587 * imageData[i].Green + 0.114 * imageData[i].Blue);
+        BYTE Cb = BYTE(-0.169 * imageData[i].Red - 0.331 * imageData[i].Green + 0.5   * imageData[i].Blue);
+        BYTE Cr = BYTE( 0.5   * imageData[i].Red - 0.419 * imageData[i].Green - 0.081 * imageData[i].Blue);
+
+        // Assign YCbCr to RBG
+        imageData[i].Red   = Y;
+        imageData[i].Green = Cb;
+        imageData[i].Blue  = Cr;
+    }
+    colorSpace = YCbCr;
+}
+
+void BitMap::RGB2XYZ()
+{
+    size_t pixelCounts = (iHeader->biWidth) * (iHeader->biHeight);
+    double M[3][3] = { 0.436052025, 0.385081593, 0.143087414,
+                       0.222491598, 0.716886060, 0.060621486,
+                       0.013929122, 0.097097002, 0.714185470 };
+    for(size_t i = 0; i < pixelCounts; ++i)
+    {
+        // Compute R, G and B value
+        double R = gammaX( imageData[i].Red   / 255.0 );
+        double G = gammaX( imageData[i].Green / 255.0 );
+        double B = gammaX( imageData[i].Blue  / 255.0 );
+
+        // Compute X, Y and Z value
+        BYTE X = BYTE(100 * (M[0][0] * R + M[0][1] * G + M[0][2] * B ));
+        BYTE Y = BYTE(100 * (M[1][0] * R + M[1][1] * G + M[1][2] * B ));
+        BYTE Z = BYTE(100 * (M[2][0] * R + M[2][1] * G + M[2][2] * B ));
+
+        // Assign YCbCr to RBG
+        imageData[i].Red   = X;
+        imageData[i].Green = Y;
+        imageData[i].Blue  = Z;
+    }
+    colorSpace = XYZ;
+}
+
+int BitMap::getcSpace()
+{
+    vector<string> vName = { "RGB", "YIQ", "HSI", "YCbCr", "XYZ" };
+    cout << "Color space: " << vName[colorSpace-1] << endl;
+    return colorSpace;
+}
+
+double BitMap::gammaX(double x)
+{
+    return (x > 0.04045)? pow( (x+0.055)/1.055, 2.4 ): (x / 12.92);
+}
+
 void write(const std::string newFileName, BitMap& image, int flag)
 {
     // Open file and check if file is valid
@@ -158,16 +265,16 @@ void displayColorSpace(const BitMap image, int cSpace)
         case 1:
             break;
         case 2:
-            RGB2YIQ(temp);
+            temp.RGB2YIQ();
             break;
         case 3:
-            RGB2HSI(temp);
+            temp.RGB2HSI();
             break;
         case 4:
-            RGB2YCbCr(temp);
+            temp.RGB2YCbCr();
             break;
         case 5:
-            RGB2XYZ(temp);
+            temp.RGB2XYZ();
             break;
         default:
             break;
@@ -222,100 +329,4 @@ void retrieveComponent(const BitMap& image, int cSpace)
     // Delete temp file
     for(int i = 0; i < name.size(); i++)
         remove(name[i].c_str());
-}
-
-void RGB2YIQ(BitMap& image)
-{
-    size_t pixelCounts = (image.iHeader->biWidth) * (image.iHeader->biHeight);
-    for(size_t i = 0; i < pixelCounts; ++i)
-    {
-        // Compute Y, I and Q value
-        BYTE Y = BYTE(0.299 * image.imageData[i].Red + 0.587 * image.imageData[i].Green + 0.114 * image.imageData[i].Blue);
-        BYTE I = BYTE(0.596 * image.imageData[i].Red - 0.275 * image.imageData[i].Green - 0.321 * image.imageData[i].Blue);
-        BYTE Q = BYTE(0.212 * image.imageData[i].Red - 0.523 * image.imageData[i].Green - 0.311 * image.imageData[i].Blue);
-
-        // Assign YIQ to RBG
-        image.imageData[i].Red   = Y;
-        image.imageData[i].Green = I;
-        image.imageData[i].Blue  = Q;
-    }
-}
-
-void RGB2HSI(BitMap& image)
-{
-    size_t pixelCounts = (image.iHeader->biWidth) * (image.iHeader->biHeight);
-    for(size_t i = 0; i < pixelCounts; ++i)
-    {
-        // Compute r, g and b value
-        int t = image.imageData[i].Red + image.imageData[i].Green + image.imageData[i].Blue;
-        double r = (double)image.imageData[i].Red   / (double)t;
-        double g = (double)image.imageData[i].Green / (double)t;
-        double b = (double)image.imageData[i].Blue  / (double)t;
-
-        // Compute h, s and i value
-        double h = 0;
-        if (b <= g)
-            h = acos( 0.5*(r-g+r-b) / sqrt( (r-g)*(r-g)+(r-b)*(g-b) ) );
-        else
-            h = 2*pi - acos( 0.5*(r-g+r-b) / sqrt( (r-g)*(r-g)+(r-b)*(g-b) ) );
-        double s = 1 - 3 * min( min(r, g), b );
-        double ii = t / (3.0 * 255);
-
-        // Compute H, S and I value
-        BYTE H = BYTE(h * 180 / pi);
-        BYTE S = BYTE(s * 100);
-        BYTE I = BYTE(ii * 255);
-
-        // Assign HSI to RBG
-        image.imageData[i].Red   = H;
-        image.imageData[i].Green = S;
-        image.imageData[i].Blue  = I;
-    }
-}
-
-void RGB2YCbCr(BitMap& image)
-{
-    size_t pixelCounts = (image.iHeader->biWidth) * (image.iHeader->biHeight);
-    for(size_t i = 0; i < pixelCounts; ++i)
-    {
-        // Compute Y, Cb and Cr value
-        BYTE Y  = BYTE( 0.299 * image.imageData[i].Red + 0.587 * image.imageData[i].Green + 0.114 * image.imageData[i].Blue);
-        BYTE Cb = BYTE(-0.169 * image.imageData[i].Red - 0.331 * image.imageData[i].Green + 0.5   * image.imageData[i].Blue);
-        BYTE Cr = BYTE( 0.5   * image.imageData[i].Red - 0.419 * image.imageData[i].Green - 0.081 * image.imageData[i].Blue);
-
-        // Assign YCbCr to RBG
-        image.imageData[i].Red   = Y;
-        image.imageData[i].Green = Cb;
-        image.imageData[i].Blue  = Cr;
-    }
-}
-
-void RGB2XYZ(BitMap& image)
-{
-    size_t pixelCounts = (image.iHeader->biWidth) * (image.iHeader->biHeight);
-    double M[3][3] = { 0.436052025, 0.385081593, 0.143087414,
-                       0.222491598, 0.716886060, 0.060621486,
-                       0.013929122, 0.097097002, 0.714185470 };
-    for(size_t i = 0; i < pixelCounts; ++i)
-    {
-        // Compute R, G and B value
-        double R = gammaX( image.imageData[i].Red   / 255.0 );
-        double G = gammaX( image.imageData[i].Green / 255.0 );
-        double B = gammaX( image.imageData[i].Blue  / 255.0 );
-
-        // Compute X, Y and Z value
-        BYTE X = BYTE(100 * (M[0][0] * R + M[0][1] * G + M[0][2] * B ));
-        BYTE Y = BYTE(100 * (M[1][0] * R + M[1][1] * G + M[1][2] * B ));
-        BYTE Z = BYTE(100 * (M[2][0] * R + M[2][1] * G + M[2][2] * B ));
-
-        // Assign YCbCr to RBG
-        image.imageData[i].Red   = X;
-        image.imageData[i].Green = Y;
-        image.imageData[i].Blue  = Z;
-    }
-}
-
-double gammaX(double x)
-{
-    return (x > 0.04045)? pow( (x+0.055)/1.055, 2.4 ): (x / 12.92);
 }

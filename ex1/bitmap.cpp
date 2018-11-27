@@ -48,8 +48,8 @@ int main(int argc, char const *argv[])
 
     // Create new image and edit pixel values
     BitMap newImage(image); // BitMap newImage = image;
-    const string newFileName = "lena_editted.bmp";
-    write(newFileName, newImage);
+    const string newFileName = "lena_edited.bmp";
+    write(newFileName, newImage, 0);
 
     // Display edited image
     Mat image_cv = imread(newFileName, IMREAD_COLOR);
@@ -66,7 +66,7 @@ int main(int argc, char const *argv[])
         // HSI
         // YCbCr
         // XYZ
-    displayColorSpace(image, HSI);
+    displayColorSpace(image, RGB);
 
     return 0;
 }
