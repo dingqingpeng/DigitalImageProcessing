@@ -33,6 +33,8 @@ int main(int argc, char const *argv[])
     
     image.showFileHeader();
     image.showInfoHeader();
+    bmpshow("Regenerated Image", image);
+    waitKey(0);
 
     // Get value of certain pixel
     int row = 123, col = 123;
@@ -45,19 +47,6 @@ int main(int argc, char const *argv[])
     {
         cerr << msg << endl;
     }
-
-    // Create new image and edit pixel values
-    BitMap newImage(image); // BitMap newImage = image;
-    const string newFileName = "lena_edited.bmp";
-    write(newFileName, newImage, 0);
-
-    // Display edited image
-    Mat image_cv = imread(newFileName, IMREAD_COLOR);
-    if(image_cv.empty())    cout << "empty" << endl;
-    namedWindow("window");
-    imshow("window", image_cv);
-    waitKey(0);
-    remove(newFileName.c_str());
 
     // Convert RGB to destination color space and display
     // Options:

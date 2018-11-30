@@ -263,6 +263,14 @@ void displayColorSpace(const BitMap image, int cSpace = RGB);
  */
 void retrieveComponent(const BitMap& image, int cSpace = RGB);
 
-
+/* 
+ * Brief: Show bmp image with OpenCV
+ * Parameter:
+ *     windowName -- name of display window
+ *     image -- image to be displayed
+ * Return:
+ *     None
+ */
+void bmpshow(const std::string& windowName, const BitMap& image, int channel = 0);
 
 #endif

@@ -313,20 +313,46 @@ void retrieveComponent(const BitMap& image, int cSpace)
     // Display channels
     for(int i = 0; i < name.size(); i++)
     {
-        // Write splitted image to bmp file
-        write(name[i], vTemp[i], 0);
-
-        // Display with OpenCV
-        string windowName = name[i];
-        Mat imageTemp = imread(name[i], IMREAD_GRAYSCALE);
-        if(imageTemp.empty())    cout << "empty" << endl;
-        namedWindow(windowName);
-        moveWindow(windowName, i * image.iHeader->biWidth, 50);
-        imshow(windowName, imageTemp);
+        namedWindow(name[i]);
+        moveWindow(name[i], i * image.iHeader->biWidth, 50);
+        bmpshow(name[i], vTemp[i], i+1);
     }
     waitKey(0);
+}
 
-    // Delete temp file
-    for(int i = 0; i < name.size(); i++)
-        remove(name[i].c_str());
+void bmpshow(const std::string& windowName, const BitMap& image, int channel)
+{
+    // Compute image size parameters
+    size_t width  = image.iHeader->biWidth;
+    size_t height = image.iHeader->biHeight;
+    size_t pixelCounts = (image.iHeader->biWidth) * (image.iHeader->biHeight);
+    size_t blockSize = sizeof(IMAGEDATA) * pixelCounts;
+
+    if (channel == 0)
+    {
+        // Create (OpenCV) Mat type data
+        Mat bmp(height, width, CV_8UC3);
+
+        // Resort image data, flip along x(width direction) axis
+        // And copy image data to Mat
+        for(size_t i = 0; i < height; i++)
+            memcpy(bmp.ptr<IMAGEDATA>(i), image.imageData + (height-1-i)*width, sizeof(IMAGEDATA) * width);
+        imshow(windowName, bmp);
+    }
+    else if(channel == 1 || channel == 2 || channel == 3)
+    {
+        // Create single channel Mat
+        Mat bmp(height, width, CV_8UC1);
+
+        // Resort image data, flip along x(width direction) axis
+        // And copy single channel data to Mat
+        for(size_t i = 0; i < height; i++)
+            for(size_t j = 0; j < width; j++)
+            {
+                IMAGEDATA temp = (image.imageData + (height-1-i)*width)[j];
+                bmp.ptr<BYTE>(i)[j] = ((BYTE*)&temp)[3-channel];
+            }
+        imshow(windowName, bmp);
+    }
+    else    cout << "Wrong channel" << endl;
 }
