@@ -91,7 +91,7 @@ public:
      * Parameter:
      *     None
      */
-    BitMap(): fHeader(NULL), iHeader(NULL), rgbQuad(NULL), imageData(NULL), colorSpace(RGB) {};
+    BitMap(): fHeader(NULL), iHeader(NULL), rgbQuad(NULL), imageData(NULL), colorSpace(RGB), usePalette(false) {};
 
     /* 
      * Brief: Overload constructor
@@ -112,7 +112,7 @@ public:
      * Parameter:
      *     None
      */
-    ~BitMap() { delete fHeader; delete iHeader; delete rgbQuad; free(imageData); }
+    ~BitMap() { delete fHeader; delete iHeader; free(rgbQuad); free(imageData); }
 
     /* 
      * Brief: Check if input file is a valid bitmap image
@@ -202,6 +202,7 @@ public:
     Ptr_iHeader   iHeader;
     Ptr_rgbQuad   rgbQuad;
     Ptr_imageData imageData;
+    bool usePalette;
 
 private:
     /* 
@@ -215,6 +216,13 @@ private:
 private:
     int colorSpace;
 };
+
+/* 
+ * Brief: Print help information
+ * Parameter:
+ *     None
+ */
+void printHelp();
 
 /* 
  * Brief: load image
@@ -251,7 +259,7 @@ void write(const std::string newFileName, BitMap& image, int flag = 1);
  * Return:
  *     None
  */
-void displayColorSpace(const BitMap image, int cSpace = RGB);
+void displayColorSpace(const BitMap& image, int cSpace = RGB);
 
 /* 
  * Brief: Retrieve component of color space and display

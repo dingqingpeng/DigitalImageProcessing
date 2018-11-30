@@ -22,8 +22,21 @@ using namespace std;
 
 int main(int argc, char const *argv[])
 {  
-    // Load file and check validation
+    if(argc > 3)
+    {
+        printHelp();
+        return -1;
+    }
+    else
+    {
     const string inputFileName = argv[1];
+    if(inputFileName == "-h")
+    {
+        printHelp();
+        return 0;
+    }
+
+    // Load file and check validation
     BitMap image( inputFileName );  // BitMap image = load(inputFileName);
     if(!image.formatCheck())
     {
@@ -33,14 +46,16 @@ int main(int argc, char const *argv[])
     
     image.showFileHeader();
     image.showInfoHeader();
+    cout << "-- Displaying regenerated image --" << endl;
     bmpshow("Regenerated Image", image);
     waitKey(0);
+    cout << endl;
 
     // Get value of certain pixel
-    int row = 123, col = 123;
+    int row = 123, col = 100;
     try
     {
-        cout << "-- pixel value at (" << row << " ," << col << ")" << endl;
+        cout << "-- pixel value at (" << row << " ," << col << ") --" << endl;
         cout << image.at(row, col) << endl;
     }
     catch(const char* msg)
@@ -55,8 +70,28 @@ int main(int argc, char const *argv[])
         // HSI
         // YCbCr
         // XYZ
-    displayColorSpace(image, RGB);
-
+    if(argc == 3)
+    {
+        vector<string> vName = { "-RGB", "-YIQ", "-HSI", "-YCbCr", "-XYZ" };
+        int index = 0;
+        for(int i = 0; i < vName.size(); i++)
+        {
+            if(argv[2] == vName[i])
+            {
+                index = i+1;
+                break;
+            }
+        }
+        
+        if(index == 0)  cout << "Wrong color space type." << endl;
+        else
+        {
+            cout << "-- Displaying color components --" << endl;
+            displayColorSpace(image, index);
+        }
+    }
+    
     return 0;
+    }
 }
 

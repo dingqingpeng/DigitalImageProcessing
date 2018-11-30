@@ -21,6 +21,17 @@ using namespace cv;
 
 using namespace std;
 
+void printHelp()
+{
+    cout << "Help: bitread FileName [ColorSpace]" << endl;
+    cout << "FileName:   name of image file" << endl;
+    cout << "ColorSpace: -RGB" << endl;
+    cout << "            -YIQ" << endl;
+    cout << "            -HSI" << endl;
+    cout << "            -YCbCr" << endl;
+    cout << "            -XYZ" << endl;
+}
+
 std::ostream& operator << ( std::ostream& out, IMAGEDATA data)
 {
     out << "Red:   " << (int)data.Red << endl;
@@ -39,16 +50,43 @@ BitMap::BitMap(const std::string& fileName)
     }
 
     // Read header data in binary format
-    infile.read((char*)(this->fHeader = new(BITMAPFILEHEADER)), sizeof(BITMAPFILEHEADER));
-    infile.read((char*)(this->iHeader = new(BITMAPINFOHEADER)), sizeof(BITMAPINFOHEADER));
-    if( (fHeader->bfOffBits) > ( sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) ) )
-        infile.read((char*)(this->rgbQuad = new(RGBQUAD)), sizeof(RGBQUAD));
-    else
-        this->rgbQuad = NULL;
+    infile.read((char*)(fHeader = new(BITMAPFILEHEADER)), sizeof(BITMAPFILEHEADER));
+    infile.read((char*)(iHeader = new(BITMAPINFOHEADER)), sizeof(BITMAPINFOHEADER));
+
+    // Read palette data
+    size_t height = iHeader->biHeight;
+    size_t width = iHeader->biWidth;
+    size_t blockSize = sizeof(IMAGEDATA) * height * width;
+    int paletteSize = fHeader->bfOffBits - sizeof(BITMAPFILEHEADER) - sizeof(BITMAPINFOHEADER);
+    usePalette = (paletteSize == 0)? false: true;
 
     // Read image data
-    size_t blockSize = sizeof(IMAGEDATA) * (iHeader->biWidth) * (iHeader->biHeight);
-    infile.read((char*)(this->imageData = (IMAGEDATA*)malloc(blockSize)), blockSize);
+    imageData = (IMAGEDATA*)malloc(blockSize);
+
+    // If usePalette == true, reassign RGB values to imageData
+    if( usePalette )
+    {
+        infile.read((char*)(rgbQuad = (RGBQUAD*)malloc(paletteSize)), paletteSize);
+        BYTE* ptemp = (BYTE*)malloc(blockSize);
+        infile.read((char*)ptemp, blockSize);
+        for(size_t i = 0; i < height; i++)
+            for(size_t j = 0; j < width; j++)
+            {
+                int index = i * width + j;
+                RGBQUAD temp = rgbQuad[ ptemp[index] ];
+                // cout << "-->" << i*width + j << endl;
+                imageData[index].Red   = temp.rgbRed;
+                imageData[index].Green = temp.rgbGreen;
+                imageData[index].Blue  = temp.rgbBlue;
+            }
+        free(ptemp);
+    }
+    // If usePalette == false, read image data directly
+    else
+    {
+        rgbQuad = NULL;
+        infile.read((char*)imageData, blockSize);
+    }
 
     // Default color space type
     colorSpace = RGB;
@@ -58,17 +96,28 @@ BitMap::BitMap(const std::string& fileName)
 
 BitMap::BitMap(const BitMap& image)
 {
+    int paletteSize = image.fHeader->bfOffBits - sizeof(BITMAPFILEHEADER) - sizeof(BITMAPINFOHEADER);
+    this->usePalette = image.usePalette;
+    size_t pixelCounts = (image.iHeader->biWidth) * (image.iHeader->biHeight);
+    size_t blockSize = sizeof(IMAGEDATA) * pixelCounts;
+
     // Allocate memory for new image
     this->fHeader = new(BITMAPFILEHEADER);
     this->iHeader = new(BITMAPINFOHEADER);
-    this->rgbQuad = NULL;
-    size_t pixelCounts = (image.iHeader->biWidth) * (image.iHeader->biHeight);
-    size_t blockSize = sizeof(IMAGEDATA) * pixelCounts;
+    
+    // this->rgbQuad = new(RGBQUAD);
     this->imageData = (IMAGEDATA*)malloc(blockSize);
 
     // Copy memory
     memcpy(this->fHeader, image.fHeader, sizeof(BITMAPFILEHEADER));
     memcpy(this->iHeader, image.iHeader, sizeof(BITMAPINFOHEADER));
+    if( usePalette )
+    {
+        this->rgbQuad = (RGBQUAD*)malloc(paletteSize);
+        memcpy(this->rgbQuad, image.rgbQuad, paletteSize);
+    }
+    else
+        this->rgbQuad = NULL;
     memcpy(this->imageData, image.imageData, blockSize);
 
     // Default color space type
@@ -111,7 +160,11 @@ IMAGEDATA BitMap::at(size_t row, size_t col)
     size_t rowInBmp = iHeader->biHeight -1 - row;
     if(rowInBmp < 0 || rowInBmp >= iHeader->biHeight || col < 0 || col >= iHeader->biWidth )
         throw "-- Out of range";
-    return imageData[ rowInBmp*iHeader->biWidth + col ];
+    
+    if( usePalette )
+        return *(IMAGEDATA*)&(rgbQuad[ ((BYTE*)imageData + rowInBmp*iHeader->biWidth)[col] ]);
+    else
+        return imageData[ rowInBmp*iHeader->biWidth + col ];
 }
 
 void BitMap::RGB2YIQ()
@@ -257,7 +310,7 @@ BitMap load(const std::string fileName)
     return image;
 }
 
-void displayColorSpace(const BitMap image, int cSpace)
+void displayColorSpace(const BitMap& image, int cSpace)
 {
     BitMap temp = image;
     switch (cSpace)
@@ -336,7 +389,7 @@ void bmpshow(const std::string& windowName, const BitMap& image, int channel)
         // Resort image data, flip along x(width direction) axis
         // And copy image data to Mat
         for(size_t i = 0; i < height; i++)
-            memcpy(bmp.ptr<IMAGEDATA>(i), image.imageData + (height-1-i)*width, sizeof(IMAGEDATA) * width);
+        memcpy(bmp.ptr<IMAGEDATA>(i), image.imageData + (height-1-i)*width, sizeof(IMAGEDATA) * width);
         imshow(windowName, bmp);
     }
     else if(channel == 1 || channel == 2 || channel == 3)
