@@ -51,7 +51,7 @@ int main(int argc, char const *argv[])
     waitKey(0);
     cout << endl;
 
-    // Get value of certain pixel
+    // Get value of certain pixel==
     int row = 123, col = 100;
     try
     {

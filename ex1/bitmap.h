@@ -91,7 +91,7 @@ public:
      * Parameter:
      *     None
      */
-    BitMap(): fHeader(NULL), iHeader(NULL), rgbQuad(NULL), imageData(NULL), colorSpace(RGB), usePalette(false) {};
+    BitMap(): fHeader(NULL), iHeader(NULL), rgbQuad(NULL), imageData(NULL), colorSpace(RGB), usePalette(false) {}
 
     /* 
      * Brief: Overload constructor
