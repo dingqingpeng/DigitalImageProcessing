@@ -9,5 +9,5 @@ find_package( OpenCV 3.3 REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 # Add an executable file
-add_executable( fft2 ex2.cpp transform.cpp )
-target_link_libraries( fft2 ${OpenCV_LIBS} )
+add_executable( trans ex2.cpp transform.cpp )
+target_link_libraries( trans ${OpenCV_LIBS} )

@@ -13,6 +13,39 @@
 
 using namespace std;
 
+template<typename InputType, typename OutputType, typename CoreType>
+void FastTransformBase2<InputType, OutputType, CoreType>::truncate()
+{
+    layer = log2( this->inputSequence.size() );
+    len2compute = 1 << layer;      // i.e. pow(2, layer)
+}
+
+template<typename InputType, typename OutputType, typename CoreType>
+void FastTransformBase2<InputType, OutputType, CoreType>::sort()
+{
+    for( size_t i = 0; i < len2compute; ++i )
+        this->outputSequence.push_back( OutputType(this->inputSequence[binaryReverse(i)]) );
+}
+
+template<typename InputType, typename OutputType, typename CoreType>
+size_t FastTransformBase2<InputType, OutputType, CoreType>::binaryReverse(size_t n)
+{
+    size_t reverse_n = 0;
+    for( size_t i = 0; i < layer; ++i )
+    {
+        size_t lastBit = n & 1;
+        n >>= 1;
+        reverse_n <<= 1;
+        reverse_n |= lastBit;
+    }
+    return reverse_n;
+}
+
+void fdct::execute()
+{
+    dct::execute();
+}
+
 void dft::execute()
 {
     size_t M = inputSequence.size();
@@ -28,40 +61,21 @@ void dft::execute()
     }
 }
 
-void fft2::truncate()
-{
-    layer = log2( inputSequence.size() );
-    len2compute = 1 << layer;      // i.e. pow(2, layer)
-}
-
-void fft2::sort()
-{
-    for( size_t i = 0; i < len2compute; ++i )
-    {
-        ComplexDFT temp( inputSequence[binaryReverse(i)], 0 );
-        outputSequence.push_back( temp );
-    }
-}
-
-size_t fft2::binaryReverse(size_t n)
-{
-    size_t reverse_n = 0;
-    for( size_t i = 0; i < layer; ++i )
-    {
-        size_t lastBit = n & 1;
-        n >>= 1;
-        reverse_n <<= 1;
-        reverse_n |= lastBit;
-    }
-    return reverse_n;
-}
+// void fft2::sort()
+// {
+//     for( size_t i = 0; i < len2compute; ++i )
+//     {
+//         // ComplexDFT temp( inputSequence[binaryReverse(i)], 0 );
+//         outputSequence.push_back( ComplexDFT(inputSequence[binaryReverse(i)]) );
+//     }
+// }
 
 void fft2::execute()
 {
     truncate();
     sort();
 
-    OUTPUT DataTemp;
+    OutputList DataTemp;
     for(size_t i = 1; i <= layer; i++)          // Compute each layer
     {
         DataTemp.assign( outputSequence.begin(), outputSequence.end() );

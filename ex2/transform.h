@@ -33,12 +33,11 @@ public:
     Complex(T r, T i) { re = r; im = i; }
 
     /* 
-     * Brief: Overload constructor, if function has only one parameter,
-     *        then reconstruct this complex with Euler equation
+     * Brief: Overload type conversion
      * Parameter:
-     *     theta -- exponential part
+     *     n -- A real number
      */
-    Complex(double theta) { re = cos(theta); im = sin(theta); }
+    Complex(T n) { re = n; im = 0; }
 
     /* 
      * Brief: Deconstructor
@@ -134,10 +133,12 @@ public:
 typedef Complex<float>  Complexf;
 typedef Complex<double> Complexd;
 
+template<typename InputType, typename OutputType, typename CoreType>
 class Transform
 {
 public:
-    typedef std::vector<double> INPUT;
+    typedef std::vector<InputType>   InputList;
+    typedef std::vector<OutputType> OutputList;
 
     /* 
      * Brief: Default constructor
@@ -158,7 +159,7 @@ public:
      * Parameter:
      *     list -- reference to data sequence
      */
-    void setData(const INPUT& list) {
+    void setData(const InputList& list) {
         inputSequence.assign( list.begin(), list.end() );
     }
 
@@ -178,44 +179,14 @@ public:
      */
     virtual void execute() = 0;
 
-protected:
-    INPUT inputSequence;
+public:
+    InputList  inputSequence;
+    OutputList outputSequence;
+    CoreType   core;
 };
 
-class dft: public Transform
-{
-public:
-    typedef Complexd                  ComplexDFT;
-    typedef std::vector< ComplexDFT > OUTPUT;
-    /* 
-     * Brief: Default constructor
-     * Parameter:
-     *     None
-     */
-    dft(): Transform() {}
-
-    /* 
-     * Brief: Set discrete Fourier transform core
-     * Parameter:
-     *     None
-     */
-    void setCore(size_t M) { core = ComplexDFT( -2.0*PI / M ); }
-
-    /* 
-     * Brief: Execute dft
-     * Parameter:
-     *     None
-     * Return:
-     *     None
-     */
-    void execute();
-
-public:
-    ComplexDFT core;
-    OUTPUT     outputSequence;
-};
-
-class fft2: public dft
+template<typename InputType, typename OutputType, typename CoreType>
+class FastTransformBase2: virtual public Transform<InputType, OutputType, CoreType>
 {
 public:
     /* 
@@ -223,7 +194,7 @@ public:
      * Parameter:
      *     None
      */
-    fft2(): dft(), layer(0), len2compute(0) {}
+    FastTransformBase2(): Transform<InputType, OutputType, CoreType>::Transform(), layer(0), len2compute(0) {}
 
     /* 
      * Brief: Truncate input sequence to the nearest number of 2^N
@@ -251,6 +222,62 @@ public:
      *     reversed number
      */
     size_t binaryReverse(size_t n);
+    
+public:
+    size_t layer;
+    size_t len2compute; // Length of truncated input sequence
+};
+
+class dft: virtual public Transform<double, Complexd, Complexd>
+{
+public:
+    typedef Complexd ComplexDFT;
+
+    /* 
+     * Brief: Default constructor
+     * Parameter:
+     *     None
+     */
+    dft(): Transform() {}
+
+    /* 
+     * Brief: Set discrete Fourier transform core
+     * Parameter:
+     *     None
+     */
+    void setCore(size_t M) { 
+        double theta = -2.0*PI / M;
+        core = ComplexDFT( cos(theta), sin(theta) );
+    }
+
+    /* 
+     * Brief: Execute dft
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    void execute();
+};
+
+class fft2: public FastTransformBase2<double, Complexd, Complexd>, public dft
+{
+public:
+    /* 
+     * Brief: Default constructor
+     * Parameter:
+     *     None
+     */
+    fft2(): FastTransformBase2(), dft() {}
+
+    /* 
+     * Brief: Sort input sequence with reverse binary order
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    // void sort();
 
     /* 
      * Brief: Execute fft2
@@ -260,16 +287,11 @@ public:
      *     None
      */
     void execute();
-
-public:
-    size_t layer;
-    size_t len2compute; // Length of truncated input sequence
 };
 
-class dct: public Transform
+class dct: virtual public Transform<double, double, double>
 {
 public:
-    typedef std::vector< double > OUTPUT;
     /* 
      * Brief: Default constructor
      * Parameter:
@@ -295,32 +317,17 @@ public:
      *     None
      */
     void execute();
-
-public:
-    double core;
-    OUTPUT outputSequence;
 };
 
-class idct: public Transform
+class idct: public dct
 {
 public:
-    typedef std::vector< double > OUTPUT;
     /* 
      * Brief: Default constructor
      * Parameter:
      *     None
      */
-    idct(): Transform() {}
-
-    /* 
-     * Brief: Set discrete cosine transform core
-     * Parameter:
-     *     None
-     */
-    void setCore(size_t N, size_t x, size_t u) { 
-        core = (u == 0)? ( 1.0 ): 
-                         ( cos( (2.0*x+1.0)*u*PI / (2.0*N) ) ); 
-    }
+    idct(): dct() {}
 
     /* 
      * Brief: Execute idct
@@ -330,10 +337,35 @@ public:
      *     None
      */
     void execute();
+};
 
+class fdct: public FastTransformBase2<double, double, double>, public dct
+{
 public:
-    double core;
-    OUTPUT outputSequence;
+    /* 
+     * Brief: Default constructor
+     * Parameter:
+     *     None
+     */
+    fdct(): FastTransformBase2(), dct() {}
+
+    /* 
+     * Brief: Sort input sequence with reverse binary order
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    // void sort();
+
+    /* 
+     * Brief: Execute fft2
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    void execute();
 };
 
 /* 
