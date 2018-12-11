@@ -41,11 +41,6 @@ size_t FastTransformBase2<InputType, OutputType, CoreType>::binaryReverse(size_t
     return reverse_n;
 }
 
-void fdct::execute()
-{
-    dct::execute();
-}
-
 void dft::execute()
 {
     size_t M = inputSequence.size();
@@ -138,12 +133,72 @@ void idct::execute()
     }
 }
 
+void fdct::execute()
+{
+    // Using 4N FFT
+    // Construct 4N input sequence
+    size_t N = inputSequence.size();
+    for(size_t i = 0; i < N; i++)
+    {
+        inputSequence_xN.push_back( 0.0 );
+        inputSequence_xN.push_back( inputSequence[ i ] );
+    }
+    for(size_t i = 0; i < N; i++)
+    {
+        inputSequence_xN.push_back( 0.0 );
+        inputSequence_xN.push_back( inputSequence[ N - i - 1 ] );
+    }
+
+    // New a fft2 object, and execute
+    fft2 transform;
+    transform.setData(this->inputSequence_xN);
+    transform.execute();
+    
+    // Push to output sequence
+    transform.outputSequence[0].re *= sqrt( 0.25/N );
+    this->outputSequence.push_back(transform.outputSequence[0].re);
+    for(size_t i = 1; i < N; i++)
+    {
+        transform.outputSequence[i].re *= sqrt( 0.5/N );
+        this->outputSequence.push_back(transform.outputSequence[i].re);
+    }
+
+    /* // Using N FFT, faster than 4N FFT
+    // Construct N input sequence
+    size_t N = inputSequence.size();
+    for(size_t i = 0; i < N; i += 2)
+        inputSequence_xN.push_back( inputSequence[ i ] );
+    for(size_t i = 1; i < N; i += 2)
+        inputSequence_xN.push_back( inputSequence[ N - i - 1 ] );
+
+    // New a fft2 object, and execute
+    fft2 transform;
+    transform.setData(this->inputSequence_xN);
+    transform.execute();
+    
+    // Push to output sequence
+    
+    for(size_t i = 0; i < N; i++)
+    {
+        double theta = -i*PI / (2*N);
+        Complexd factor( cos(theta), sin(theta) );
+        transform.outputSequence[i] = transform.outputSequence[i] * 2 * factor;
+    }
+    transform.outputSequence[0].re *= sqrt( 0.25/N );
+    this->outputSequence.push_back(transform.outputSequence[0].re);
+    for(size_t i = 1; i < N; i++)
+    {
+        transform.outputSequence[i].re *= sqrt( 0.5/N );
+        this->outputSequence.push_back(transform.outputSequence[i].re);
+    } */
+}
+
 // template<typename T>
 std::ostream& operator << ( std::ostream& out, const std::vector< Complexd >& v)
 {
     for(size_t i = 0; i < v.size(); i++)
     {
-        out << v[i] << endl;
+        out << v[i];
     }
     return out;
 }

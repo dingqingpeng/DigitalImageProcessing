@@ -11,6 +11,8 @@ using namespace std;
 template<typename TRANS>
 void Trans(vector<double> data);
 
+vector<double> idata;
+
 /****************** 
  * Brief: (数字图像处理-->实验二) Fast Fourier transform and discrete cosine transform
  * Parameters:
@@ -22,7 +24,12 @@ int main(int argc, char const *argv[])
 {
     vector<double> data = { 15, 32, 9, 222, 118, 151, 5, 7, 56, 233, 56, 121, 235, 89, 98, 111 };
 
+    Trans<fdct>(data);
+    Trans<dct>(data);
     Trans<fft2>(data);
+    Trans<dft>(data);
+
+    // Trans<idct>(idata);
 
     return 0;
 }
@@ -30,7 +37,10 @@ int main(int argc, char const *argv[])
 template<typename TRANS>
 void Trans(vector<double> data)
 {
+    idata.clear();
+    
     TRANS trans;
+    cout << "-- " << typeid(trans).name() << " --" << endl;
 #ifdef COMPUTE_TIME_CONSUMPTION
     chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
 #endif
@@ -41,6 +51,12 @@ void Trans(vector<double> data)
     chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>( t2-t1 );
     cout << "Time consumption: " << time_used.count()*1000 << " ms" << endl;
 #endif
-    cout << "-- " << typeid(trans).name() << " --" << endl;
+    
     cout << trans.outputSequence << endl;
+
+    for(size_t i = 0; i < trans.outputSequence.size(); i++)
+    {
+        // idata.push_back(trans.outputSequence[i]);
+    }
+    
 }

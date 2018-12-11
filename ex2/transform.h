@@ -271,15 +271,6 @@ public:
     fft2(): FastTransformBase2(), dft() {}
 
     /* 
-     * Brief: Sort input sequence with reverse binary order
-     * Parameter:
-     *     None
-     * Return:
-     *     None
-     */
-    // void sort();
-
-    /* 
      * Brief: Execute fft2
      * Parameter:
      *     None
@@ -306,7 +297,7 @@ public:
      */
     void setCore(size_t N, size_t x, size_t u) { 
         core = (u == 0)? ( 1.0 ): 
-                         ( cos( (2.0*x+1.0)*u*PI / (2.0*N) ) ); 
+                         ( cos( (2.0*x+1.0)*u*PI / (2.0*N) ) );
     }
 
     /* 
@@ -350,22 +341,16 @@ public:
     fdct(): FastTransformBase2(), dct() {}
 
     /* 
-     * Brief: Sort input sequence with reverse binary order
-     * Parameter:
-     *     None
-     * Return:
-     *     None
-     */
-    // void sort();
-
-    /* 
-     * Brief: Execute fft2
+     * Brief: Execute fdct using 4N FFT
      * Parameter:
      *     None
      * Return:
      *     None
      */
     void execute();
+
+public:
+    InputList inputSequence_xN; 
 };
 
 /* 
