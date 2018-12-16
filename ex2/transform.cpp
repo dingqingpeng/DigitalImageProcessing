@@ -5,8 +5,8 @@
 
 #define PI 3.1415926
 
-/****************** 
- * Brief: (数字图像处理-->实验二) Fast Fourier transform and discrete cosine transform
+/******************
+ * Brief: (数字图像处理-->实验二) Fourier transform and discrete cosine transform
  * Author:
  *     Ding Qingpeng (丁庆鹏, Student No. 18B903053)
  ******************/
@@ -23,8 +23,9 @@ void FastTransformBase2<InputType, OutputType, CoreType>::truncate()
 template<typename InputType, typename OutputType, typename CoreType>
 void FastTransformBase2<InputType, OutputType, CoreType>::sort()
 {
-    for( size_t i = 0; i < len2compute; ++i )
+    for( size_t i = 0; i < len2compute; ++i ) {
         this->outputSequence.push_back( OutputType(this->inputSequence[binaryReverse(i)]) );
+    }
 }
 
 template<typename InputType, typename OutputType, typename CoreType>
@@ -41,31 +42,67 @@ size_t FastTransformBase2<InputType, OutputType, CoreType>::binaryReverse(size_t
     return reverse_n;
 }
 
-void dft::execute()
-{
-    size_t M = inputSequence.size();
-    setCore( M );
-    for(size_t u = 0; u < M; u++)
-    {
-        ComplexDFT sum(0, 0);
-        for(size_t x = 0; x < M; x++)
-        {
-            sum = sum + core.pow( u*x ) * inputSequence[x];
-        }
-        outputSequence.push_back( sum );
-    }
-}
+//void dftdouble::execute()
+//{
+//    size_t M = inputSequence.size();
+//    setCore( M );
+//    for(size_t u = 0; u < M; u++)
+//    {
+//        ComplexDFT sum(0, 0);
+//        for(size_t x = 0; x < M; x++)
+//        {
+//            sum = sum + core.pow( u*x ) * inputSequence[x];
+//        }
+//        outputSequence.push_back( sum );
+//    }
+//}
+//
+//void dftComplex::execute()
+//{
+//    size_t M = inputSequence.size();
+//    setCore( M );
+//    for(size_t u = 0; u < M; u++)
+//    {
+//        ComplexDFT sum(0, 0);
+//        for(size_t x = 0; x < M; x++)
+//        {
+//            sum = sum + core.pow( u*x ) * inputSequence[x];
+//        }
+//        outputSequence.push_back( sum );
+//    }
+//}
 
-// void fft2::sort()
-// {
-//     for( size_t i = 0; i < len2compute; ++i )
-//     {
-//         // ComplexDFT temp( inputSequence[binaryReverse(i)], 0 );
-//         outputSequence.push_back( ComplexDFT(inputSequence[binaryReverse(i)]) );
-//     }
-// }
+//void idftdouble::execute()
+//{
+//    size_t M = inputSequence.size();
+//    setCore( M );
+//    for(size_t u = 0; u < M; u++)
+//    {
+//        ComplexDFT sum(0, 0);
+//        for(size_t x = 0; x < M; x++)
+//        {
+//            sum = sum + core.pow( u*x ) * inputSequence[x];
+//        }
+//        outputSequence.push_back( (double)sum / M );
+//    }
+//}
 
-void fft2::execute()
+//void idftComplex::execute()
+//{
+//    size_t M = inputSequence.size();
+//    setCore( M );
+//    for(size_t u = 0; u < M; u++)
+//    {
+//        ComplexDFT sum(0, 0);
+//        for(size_t x = 0; x < M; x++)
+//        {
+//            sum = sum + core.pow( u*x ) * inputSequence[x];
+//        }
+//        outputSequence.push_back( ComplexDFT(sum) / (double)M );
+//    }
+//}
+
+void fft2double::execute()
 {
     truncate();
     sort();
@@ -90,6 +127,74 @@ void fft2::execute()
             }
         }
     }
+}
+
+void fft2Complex::execute()
+{
+    truncate();
+    sort();
+
+    OutputList DataTemp;
+    for(size_t i = 1; i <= layer; i++)          // Compute each layer
+    {
+        DataTemp.assign( outputSequence.begin(), outputSequence.end() );
+        setCore( 1 << i );                      // i.e. pow(2, i)
+        size_t sections = 1 << ( layer - i );   // i.e. pow(2, layer - i)
+        size_t jump     = len2compute / ( sections*2 );
+        for(size_t j = 0; j < sections; j++)    // Compute each section in every layer
+        {
+            size_t bias = j * jump * 2;
+            for(size_t k = 0; k < jump; k++)    // Computes each element in every section
+            {
+                size_t start = bias + k;
+                ComplexDFT F_even = DataTemp[start];
+                ComplexDFT F_odd  = DataTemp[start + jump] * core.pow(k);
+                outputSequence[start]        = F_even + F_odd;
+                outputSequence[start + jump] = F_even - F_odd;
+            }
+        }
+    }
+}
+
+void ifft2Complex::execute()
+{
+    truncate();
+    sort();
+    for(size_t i = 0; i < len2compute; i++)
+        outputSequence[i].conjugate();
+
+    OutputList DataTemp;
+    for(size_t i = 1; i <= layer; i++)          // Compute each layer
+    {
+        DataTemp.assign( outputSequence.begin(), outputSequence.end() );
+        setCore( 1 << i );                      // i.e. pow(2, i)
+        size_t sections = 1 << ( layer - i );   // i.e. pow(2, layer - i)
+        size_t jump     = len2compute / ( sections*2 );
+        for(size_t j = 0; j < sections; j++)    // Compute each section in every layer
+        {
+            size_t bias = j * jump * 2;
+            for(size_t k = 0; k < jump; k++)    // Computes each element in every section
+            {
+                size_t start = bias + k;
+                ComplexDFT F_even = DataTemp[start];
+                ComplexDFT F_odd  = DataTemp[start + jump] * core.pow(k);
+                outputSequence[start]        = F_even + F_odd;
+                outputSequence[start + jump] = F_even - F_odd;
+            }
+        }
+    }
+    for(size_t i = 0; i < len2compute; i++)
+    {
+        outputSequence[i] = outputSequence[i] / (double)len2compute;
+    }
+}
+
+void ifft2double::execute()
+{
+    ifft2Complex trans;
+    trans.setData(inputSequence);
+    trans.execute();
+    outputSequence.assign( trans.outputSequence.begin(), trans.outputSequence.end() );
 }
 
 void dct::execute()
@@ -133,81 +238,61 @@ void idct::execute()
     }
 }
 
-void fdct::execute()
-{
-    // Using 4N FFT
-    // Construct 4N input sequence
-    size_t N = inputSequence.size();
-    for(size_t i = 0; i < N; i++)
-    {
-        inputSequence_xN.push_back( 0.0 );
-        inputSequence_xN.push_back( inputSequence[ i ] );
-    }
-    for(size_t i = 0; i < N; i++)
-    {
-        inputSequence_xN.push_back( 0.0 );
-        inputSequence_xN.push_back( inputSequence[ N - i - 1 ] );
-    }
+// void fdct::execute()
+// {
+//     // Using 4N FFT
+//     // Construct 4N input sequence
+//     /* size_t N = inputSequence.size();
+//     for(size_t i = 0; i < N; i++)
+//     {
+//         inputSequence_xN.push_back( 0.0 );
+//         inputSequence_xN.push_back( inputSequence[ i ] );
+//     }
+//     for(size_t i = 0; i < N; i++)
+//     {
+//         inputSequence_xN.push_back( 0.0 );
+//         inputSequence_xN.push_back( inputSequence[ N - i - 1 ] );
+//     }
 
-    // New a fft2 object, and execute
-    fft2 transform;
-    transform.setData(this->inputSequence_xN);
-    transform.execute();
-    
-    // Push to output sequence
-    transform.outputSequence[0].re *= sqrt( 0.25/N );
-    this->outputSequence.push_back(transform.outputSequence[0].re);
-    for(size_t i = 1; i < N; i++)
-    {
-        transform.outputSequence[i].re *= sqrt( 0.5/N );
-        this->outputSequence.push_back(transform.outputSequence[i].re);
-    }
+//     // New a fft2 object, and execute
+//     fft2 transform;
+//     transform.setData(this->inputSequence_xN);
+//     transform.execute();
 
-    /* // Using N FFT, faster than 4N FFT
-    // Construct N input sequence
-    size_t N = inputSequence.size();
-    for(size_t i = 0; i < N; i += 2)
-        inputSequence_xN.push_back( inputSequence[ i ] );
-    for(size_t i = 1; i < N; i += 2)
-        inputSequence_xN.push_back( inputSequence[ N - i - 1 ] );
+//     // Push to output sequence
+//     transform.outputSequence[0].re *= sqrt( 0.25/N );
+//     this->outputSequence.push_back(transform.outputSequence[0].re);
+//     for(size_t i = 1; i < N; i++)
+//     {
+//         transform.outputSequence[i].re *= sqrt( 0.5/N );
+//         this->outputSequence.push_back(transform.outputSequence[i].re);
+//     } */
 
-    // New a fft2 object, and execute
-    fft2 transform;
-    transform.setData(this->inputSequence_xN);
-    transform.execute();
-    
-    // Push to output sequence
-    
-    for(size_t i = 0; i < N; i++)
-    {
-        double theta = -i*PI / (2*N);
-        Complexd factor( cos(theta), sin(theta) );
-        transform.outputSequence[i] = transform.outputSequence[i] * 2 * factor;
-    }
-    transform.outputSequence[0].re *= sqrt( 0.25/N );
-    this->outputSequence.push_back(transform.outputSequence[0].re);
-    for(size_t i = 1; i < N; i++)
-    {
-        transform.outputSequence[i].re *= sqrt( 0.5/N );
-        this->outputSequence.push_back(transform.outputSequence[i].re);
-    } */
-}
+//     // Using N FFT, faster than 4N FFT
+//     // Construct N input sequence
+//     size_t N = fft2::inputSequence.size();
+//     for(size_t i = 0; i < N; i += 2)
+//         inputSequence_xN.push_back( fft2::inputSequence[ i ] );
+//     for(size_t i = 1; i < N; i += 2)
+//         inputSequence_xN.push_back( fft2::inputSequence[ N - i - 1 ] );
 
-// template<typename T>
-std::ostream& operator << ( std::ostream& out, const std::vector< Complexd >& v)
-{
-    for(size_t i = 0; i < v.size(); i++)
-    {
-        out << v[i];
-    }
-    return out;
-}
+//     // New a fft2 object, and execute
+//     fft2 transform;
+//     transform.fft2::setData(inputSequence_xN);
+//     transform.execute();
 
-std::ostream& operator << ( std::ostream& out, const std::vector< double >& v)
-{
-    for(size_t i = 0; i < v.size(); i++)
-    {
-        out << v[i] << endl;
-    }
-    return out;
-}
+//     // Push to output sequence
+//     for(size_t i = 0; i < N; i++)
+//     {
+//         double theta = -i*PI / (2.0*N);
+//         Complexd factor( cos(theta), sin(theta) );
+//         transform.outputSequence[i] = transform.outputSequence[i] * 2.0 * factor;
+//     }
+//     transform.outputSequence[0].re *= sqrt( 0.5/N );
+//     fft2::outputSequence.push_back(transform.outputSequence[0].re);
+//     for(size_t i = 1; i < N; i++)
+//     {
+//         transform.outputSequence[i].re *= sqrt( 1.0/N );
+//         fft2::outputSequence.push_back(transform.outputSequence[i].re);
+//     }
+// }

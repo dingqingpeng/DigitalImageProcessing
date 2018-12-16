@@ -8,6 +8,8 @@ set( CMAKE_CXX_FLAGS "-std=c++11" )
 find_package( OpenCV 3.3 REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
+aux_source_directory(. DIR_SRCS)
+
 # Add an executable file
-add_executable( trans ex2.cpp transform.cpp )
+add_executable( trans ${DIR_SRCS} )
 target_link_libraries( trans ${OpenCV_LIBS} )
