@@ -113,16 +113,7 @@ void fftBlocks( const ImageBlockVector& originalData, ImageBlockVectorComplex& t
     {
         ftSingleBlock<fft2D>( originalData[i], oneBlockComplex );
         transformedData.push_back( oneBlockComplex );
-        // if ( i == 0 )
-        //     findMaxAmpInBlock(oneBlockComplex);
     }
-
-    
-    // for(size_t i = 0; i < transformedData.size(); i++)
-    // {
-    //     std::cout << transformedData[i][0][0] << std::endl;
-    // }
-    
 
     std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>( t2-t1 );
@@ -140,7 +131,6 @@ void iftSingleBlock( const ImageBlockComplex& transformedData, ImageBlock& origi
     TransformType trans;
     trans.setData( transformedData );
     trans.execute();
-    // originalData.assign( trans.outputGraph.begin(), trans.outputGraph.end() );
 
     // Shift back
     if( shift )
@@ -156,13 +146,10 @@ void iftSingleBlock( const ImageBlockComplex& transformedData, ImageBlock& origi
     // Type conversion
     std::vector< BYTE > originalDataBYTE(rows);
     for(LONG i = 0; i < rows; i++){
-        // originalDataBYTE.clear();
         for(LONG j = 0; j < rows; j++) {
             double current = trans.outputGraph[i][j];
             current = ( current - min ) / ( max - min ) * 255.0;
-            originalDataBYTE[j] = (BYTE)( current + 0.5 );///5500.0*255.0
-            // std::cout << (int)originalDataBYTE[j] << std::endl;
-            // std::cout << current << std::endl;
+            originalDataBYTE[j] = (BYTE)( current + 0.5 );
         }
         originalData.push_back( originalDataBYTE );
     }
@@ -190,7 +177,6 @@ void ifftBlocks( const ImageBlockVectorComplex& transformedData, ImageBlockVecto
     std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
     ImageBlockBYTE oneBlockBYTE;
     for(int i = 0; i < transformedData.size(); i++)
-    // for(int i = 0; i < 1; i++)
     {
         oneBlockBYTE.clear();
         iftSingleBlock<ifft2D>( transformedData[i], oneBlockBYTE );
@@ -250,7 +236,6 @@ void idctSingleBlock( const ImageBlockdouble& transformedData, ImageBlock& origi
     // Type conversion
     std::vector< BYTE > originalDataBYTE(rows);
     for(LONG i = 0; i < rows; i++){
-        // originalDataBYTE.clear();
         for(LONG j = 0; j < rows; j++) {
             double current = trans.outputGraph[i][j];
             originalDataBYTE[j] = (BYTE)( current + 0.5 );
@@ -267,8 +252,6 @@ void dctBlocks( const ImageBlockVector& originalData, ImageBlockVectordouble& tr
     {
         dctSingleBlock<dct2D>( originalData[i], oneBlockdouble );
         transformedData.push_back( oneBlockdouble );
-        // if ( i == 0 )
-        //     findMaxAmpInBlock(oneBlockdouble);
     }
 
     std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
@@ -284,12 +267,10 @@ void idctBlocks( const ImageBlockVectordouble& transformedData, ImageBlockVector
     ImageBlockBYTE oneBlockBYTE;
     ImageBlockdouble oneBlockTransformedData;
     for(int i = 0; i < transformedData.size(); i++)
-    // for(int i = 0; i < 1; i++)
     {
         oneBlockBYTE.clear();
         oneBlockTransformedData.assign( transformedData[i].begin(), transformedData[i].end() );
         zigzag( oneBlockTransformedData, keepCoeff );
-        // std::cout << oneBlockTransformedData << std::endl;
         idctSingleBlock<idct2D>( oneBlockTransformedData, oneBlockBYTE );
         originalData.push_back( oneBlockBYTE );   
     }
@@ -316,7 +297,6 @@ void visualizeTransform( ImageBlockVectorComplex& transformedData, BLOCKEDIMAGES
     // Construct image
     for(LONG i = 0; i < rows; i++)
     {
-        // std::cout << "--> i = " << i << std::endl;
         for(LONG j = 0; j < cols; j++)
         {
             int rowofBlock = i / blockSize;
@@ -326,23 +306,15 @@ void visualizeTransform( ImageBlockVectorComplex& transformedData, BLOCKEDIMAGES
             int index1 = rowofBlock * imageSize.cols + colofBlock;
             int index2 = rowinBlock;
             int index3 = colinBlock;
-            // std::cout << rowofBlock << std::endl;
-            // std::cout << index1 << ", " << index2 << ", " << index3 << std::endl;
             ComplexDFT cPoint = transformedData[ index1 ][ index2 ][ index3 ];
-            // std::cout << cPoint.abs() << std::endl;
 
             // Compute normalize factor
-            AMPfactor = 255.0 / log( transformedData[ index1 ][ blockSize/2 ][ blockSize/2 ].abs() ); //std::cout << cPoint.abs() << std::endl;
+            AMPfactor = 255.0 / log( transformedData[ index1 ][ blockSize/2 ][ blockSize/2 ].abs() );
             PHAfactor = 255.0 / PI;
 
-            amplitudeImage.ptr<BYTE>(i)[j] = (BYTE)( log( cPoint.abs() ) * AMPfactor + 0.5 );//log( cPoint.abs() )
+            amplitudeImage.ptr<BYTE>(i)[j] = (BYTE)( log( cPoint.abs() ) * AMPfactor + 0.5 );
                 phaseImage.ptr<BYTE>(i)[j] = (BYTE)( cPoint.pha() * PHAfactor + 0.5 );
-            // std::cout << (int)amplitudeImage.ptr<BYTE>(i)[j] << std::endl;
-                phaseImage.ptr<BYTE>(i)[j] = (BYTE)cPoint.pha();
-            // std::cout << log( cPoint.abs() ) << ", "<< (int)amplitudeImage.ptr<BYTE>(i)[j] << ", " << std::endl;
-            // std::cout << cPoint.pha()                << ", "<< (int)phaseImage.ptr<BYTE>(i)[j] << ", " << std::endl;
         }
-        // std::cout << std::endl;
     }
     
     cv::imshow("Amplitude", amplitudeImage);
@@ -420,20 +392,15 @@ void findMaxAmpInBlock( ImageBlockComplex originalData )
     
     for(size_t i = 0; i < originalData.size(); i++)
     {
-        
         for(size_t j = 0; j < originalData.size(); j++)
         {
-            
             if ( max < originalData[i][j].abs() ) {
                 max = originalData[i][j].abs();
                 posx = i;
                 posy = j;
             }
-            
         }
-        
     }
-    // std::cout << "pos = (" << posx << ", " << posy << std::endl;
 }
 
 double findMaxInBlock( std::vector< std::vector<double> > originalData )
@@ -443,21 +410,15 @@ double findMaxInBlock( std::vector< std::vector<double> > originalData )
     
     for(size_t i = 0; i < originalData.size(); i++)
     {
-        
         for(size_t j = 0; j < originalData.size(); j++)
         {
-            
             if ( max < originalData[i][j] ) {
                 max = originalData[i][j];
                 posx = i;
                 posy = j;
             }
-            
         }
-        
     }
-    // std::cout << "pos = (" << posx << ", " << posy << ")" << std::endl;
-    // std::cout << "max = " << max << std::endl;
     return max;
 }
 
@@ -481,8 +442,7 @@ double findMinInBlock( std::vector< std::vector<double> > originalData )
         }
         
     }
-    // std::cout << "pos = (" << posx << ", " << posy << ")" << std::endl;
-    // std::cout << "min = " << min << std::endl;
+
     return min;
 }
 
@@ -532,11 +492,7 @@ void zigzag( ImageBlockdouble& transformedData, LONG n )
                 break;
             default:
                 break;
-        }
-
-        // std::cout << i << ", " << j << " | " << counter << std::endl;
-
-        
+        }        
 
         counter++;
     }

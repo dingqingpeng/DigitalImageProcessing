@@ -180,34 +180,6 @@ void idct::execute()
 
 void fdct::execute()
 {
-    // Using 4N FFT
-    // Construct 4N input sequence
-    /* size_t N = inputSequence.size();
-    for(size_t i = 0; i < N; i++)
-    {
-        inputSequence_xN.push_back( 0.0 );
-        inputSequence_xN.push_back( inputSequence[ i ] );
-    }
-    for(size_t i = 0; i < N; i++)
-    {
-        inputSequence_xN.push_back( 0.0 );
-        inputSequence_xN.push_back( inputSequence[ N - i - 1 ] );
-    }
-
-    // New a fft2 object, and execute
-    fft2 transform;
-    transform.setData(this->inputSequence_xN);
-    transform.execute();
-
-    // Push to output sequence
-    transform.outputSequence[0].re *= sqrt( 0.25/N );
-    this->outputSequence.push_back(transform.outputSequence[0].re);
-    for(size_t i = 1; i < N; i++)
-    {
-        transform.outputSequence[i].re *= sqrt( 0.5/N );
-        this->outputSequence.push_back(transform.outputSequence[i].re);
-    } */
-
     // Using N FFT, faster than 4N FFT
     // Construct N input sequence
     size_t N = inputSequence.size();
@@ -236,38 +208,7 @@ void fdct::execute()
     {
         transform.outputSequence[i].re *= sqrt( 0.5/N );
         outputSequence.push_back(transform.outputSequence[i]);
-    }
-
-    // Using 2N FFT
-    // Construct 2N input sequence
-    // size_t N = inputSequence.size();
-    // for(size_t i = 0; i < N; i++)
-    //     inputSequence_xN.push_back( inputSequence[ i ] );
-    // for(size_t i = 0; i < N; i++)
-    //     inputSequence_xN.push_back( 0.0 );
-
-    // // New a fft2 object, and execute
-    // fft2 transform;
-    // transform.setData(inputSequence_xN);
-    // transform.execute();
-
-    // // Push to output sequence
-    // for(long i = 0; i < N; i++)
-    // {
-    //     double theta = -i*PI / (2.0*N);
-    //     Complexd factor( cos(theta), sin(theta) );
-    //     transform.outputSequence[i] = transform.outputSequence[i] * 2.0 * factor;
-    // }
-
-    // // Push to output sequence
-    // transform.outputSequence[0].re *= sqrt( 0.25/N );
-    // outputSequence.push_back(transform.outputSequence[0].re);
-    // for(size_t i = 1; i < N; i++)
-    // {
-    //     transform.outputSequence[i].re *= sqrt( 0.5/N );
-    //     outputSequence.push_back(transform.outputSequence[i].re);
-    // }
-    
+    }    
 }
 
 void ifdct::execute()
