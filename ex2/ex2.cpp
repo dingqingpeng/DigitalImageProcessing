@@ -14,6 +14,7 @@ using namespace std;
 vector<Complexd> idata;
 vector<Complexd> idatai;
 vector<double> tempidata;
+vector<double> tempiidata;
 vector<vector<Complexd>> iidata;
 vector<vector<double>> tempdata;
 vector<vector<double>> tempdatadct;
@@ -37,15 +38,15 @@ void Trans( std::vector<inputDataType> inputdata, std::vector<outputDataType>& o
 #endif
 
 outputdata.clear();
-    // for(size_t i = 0; i < trans.outputSequence.size(); i++)
-    // {
-    //     outputdata.push_back(trans.outputSequence[i]);
-    // }
-
-    for(size_t i = 0; i < trans.outputGraph.size(); i++)
+    for(size_t i = 0; i < trans.outputSequence.size(); i++)
     {
-            outputdata.push_back(trans.outputGraph[i]);
+        outputdata.push_back(trans.outputSequenceComplex[i]);
     }
+
+    // for(size_t i = 0; i < trans.outputGraph.size(); i++)
+    // {
+    //         outputdata.push_back(trans.outputGraph[i]);
+    // }
 }
 
 /******************
@@ -88,7 +89,58 @@ int main(int argc, char const *argv[])
     // }
     
 //    Trans<idftdouble, Complexd>(idata);
-    // // Trans<fdct>(data);
+    // Trans<fdct, double, Complexd>(datad, idata);
+    // Trans<ifdct, Complexd, double>(idata, tempiidata);
+
+
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+    std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>( t2-t1 );
+
+    fdct trans1;
+    std::cout << "-- " << typeid(trans1).name() << " --" << std::endl;
+    t1 = std::chrono::steady_clock::now();
+
+    trans1.setData(datad);
+    trans1.execute();
+
+    t2 = std::chrono::steady_clock::now();
+    time_used = std::chrono::duration_cast<std::chrono::duration<double>>( t2-t1 );
+    std::cout << "Time consumption: " << time_used.count()*1000 << " ms" << std::endl;
+
+#ifdef DEBUG
+    trans1.displayResult();
+#endif
+
+    for(size_t i = 0; i < trans1.outputSequence.size(); i++)
+    {
+        tempidata.push_back(trans1.outputSequence[i]);
+    }
+
+
+
+    ifdct trans2;
+    std::cout << "-- " << typeid(trans2).name() << " --" << std::endl;
+    t1 = std::chrono::steady_clock::now();
+
+    trans2.setData(tempidata);
+    trans2.execute();
+
+    t2 = std::chrono::steady_clock::now();
+    time_used = std::chrono::duration_cast<std::chrono::duration<double>>( t2-t1 );
+    std::cout << "Time consumption: " << time_used.count()*1000 << " ms" << std::endl;
+
+#ifdef DEBUG
+    trans2.displayResult();
+#endif
+
+    for(size_t i = 0; i < trans2.outputSequence.size(); i++)
+    {
+        tempidata.push_back(trans2.outputSequence[i]);
+    }
+
+
+    // Trans<dct, double, double>(datad, tempidata);
     // Trans<dct, double>(datad);
     // // Trans<idct, double>(idata);
 
@@ -135,34 +187,65 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    // Convert RGB to YCbCr color space
+    // 0.0 Convert RGB to YCbCr color space
     image.RGB2YCbCr();
 
-    // Break image into 8*8 blocks
+    // 0.1 Break image into 8*8 blocks
+    LONG blockSize = 8;
     ImageBlockVector YBlocks;
     BLOCKEDIMAGESIZE YBlockedSize;
-    YBlockedSize = breakBMPImage( image, YBlocks, 512 );
+    YBlockedSize = breakBMPImage( image, YBlocks, blockSize );
     cout << "First Block" << endl;    
     
-
-    // DFT image blocks
+    // 1.1 DFT image blocks
     cout << "Implementing Discrete Fourier Transform..." << endl;
     ImageBlockVectorComplex Y_FreqDomain;
     fftBlocks( YBlocks, Y_FreqDomain );
     cout << "Done" << endl << endl;
     visualizeTransform( Y_FreqDomain, YBlockedSize );
 
-    // IDFT image blocks
+    // 1.2 IDFT image blocks with Amplitude only
     cout << "Implementing Inverse Discrete Fourier Transform..." << endl;
+    ImageBlockVector YBlocksReconstructed_Amp;
+    ImageBlockVectorComplex Y_Amp;
+    extractComponent( Y_FreqDomain, Y_Amp, 1 );// Phase, Amplitude
+    ifftBlocks( Y_Amp, YBlocksReconstructed_Amp );
+    cout << "Done" << endl << endl;
+
+    cout << "Displaying reconstructed image with Amplitude only..." << endl;
+    reconstructImage( YBlocksReconstructed_Amp, YBlockedSize );
+    cout << "Done" << endl << endl;
+
+    // 1.3 IDFT image blocks with Phase only
+    cout << "Implementing Inverse Discrete Fourier Transform..." << endl;
+    ImageBlockVector YBlocksReconstructed_Pha;
+    ImageBlockVectorComplex Y_Pha;
+    extractComponent( Y_FreqDomain, Y_Pha, 2 );// Phase, Amplitude
+    ifftBlocks( Y_Pha, YBlocksReconstructed_Pha );
+    cout << "Done" << endl << endl;
+
+    cout << "Displaying reconstructed image with Phase only..." << endl;
+    reconstructImage( YBlocksReconstructed_Pha, YBlockedSize );
+    cout << "Done" << endl << endl;
+
+    // 2.1 DCT image blocks
+    cout << "Implementing Discrete Cosine Transform..." << endl;
+    ImageBlockVectordouble Y_CosDomain;
+    dctBlocks( YBlocks, Y_CosDomain );
+    cout << "Done" << endl << endl;
+
+    // 2.2 IDCT image blocks
+    for(int i = 0; i < 40; i++) {
+    cout << "Implementing Inverse Discrete Cosine Transform..." << endl;
     ImageBlockVector YBlocksReconstructed;
-    ImageBlockVectorComplex Y_Extracted;
-    extractComponent( Y_FreqDomain, Y_Extracted, 2 );// Phase, Amplitude
-    ifftBlocks( Y_Extracted, YBlocksReconstructed );
+    idctBlocks( Y_CosDomain, YBlocksReconstructed, int(blockSize*blockSize * (0.02*i)+0.5) );
+    cout << 0.02*i <<", " << int(blockSize*blockSize * (0.02*i)+0.5) << endl;
     cout << "Done" << endl << endl;
 
     cout << "Displaying reconstructed image..." << endl;
     reconstructImage( YBlocksReconstructed, YBlockedSize );
     cout << "Done" << endl << endl;
+    }
 
     return 0;
 }

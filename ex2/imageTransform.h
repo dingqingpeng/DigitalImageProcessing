@@ -7,8 +7,10 @@
 
 typedef std::vector<BYTE>                    PixelVector;
 typedef std::vector< std::vector<BYTE> >     ImageBlockBYTE;
+typedef std::vector< std::vector<double> >   ImageBlockdouble;
 typedef std::vector< std::vector<Complexd> > ImageBlockComplex;
 typedef std::vector< std::vector< std::vector<BYTE> > >     ImageBlockVectorBYTE;
+typedef std::vector< std::vector< std::vector<double> > >   ImageBlockVectordouble;
 typedef std::vector< std::vector< std::vector<Complexd> > > ImageBlockVectorComplex;
 typedef ImageBlockBYTE       ImageBlock;
 typedef ImageBlockVectorBYTE ImageBlockVector;
@@ -130,5 +132,16 @@ void reconstructImage( const ImageBlockVectorBYTE& reconstructedBlocks, BLOCKEDI
 void findMaxAmpInBlock( ImageBlockComplex originalData );
 double findMaxInBlock( std::vector< std::vector<double> > originalData );
 double findMinInBlock( std::vector< std::vector<double> > originalData );
+
+template<typename TransformType>
+void dctSingleBlock( const ImageBlock& originalData, ImageBlockdouble& transformedData, bool shift = true ) ;
+void dctBlocks( const ImageBlockVector& originalData, ImageBlockVectordouble& transformedData, bool printTimeConsumption = true );
+
+
+template<typename TransformType>
+void idctSingleBlock( const ImageBlockdouble& transformedData, ImageBlock& originalData, bool shift = true );
+void idctBlocks( const ImageBlockVectordouble& transformedData, ImageBlockVector& originalData, LONG keepCoeff, bool printTimeConsumption = true );
+
+void zigzag( ImageBlockdouble& transformedData, LONG n );
 
 #endif // IMAGETRANSFORM_H_INCLUDED

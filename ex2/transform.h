@@ -434,39 +434,54 @@ public:
     void execute();
 };
 
-// class fdct: public FastTransformBase2<ComplexDFT, ComplexDFT, ComplexDFT>, public dct
-// class fdct: public fft2, public dct
-// {
-// public:
-//     /*
-//      * Brief: Default constructor
-//      * Parameter:
-//      *     None
-//      */
-//     // fdct(): FastTransformBase2(), dct() {}
-//     fdct(): fft2(), dct() {}
+class fdct: public Transform<double, double, double>
+{
+public:
+    /*
+     * Brief: Default constructor
+     * Parameter:
+     *     None
+     */
+    // fdct(): FastTransformBase2(), dct() {}
+    fdct(): Transform() {}
 
-//     /*
-//      * Brief: Set input sequence
-//      * Parameter:
-//      *     list -- reference to data sequence
-//      */
-//     void setData(const dft::InputList& list) {
-//         dft::setData(list);
-//     }
+    /*
+     * Brief: Execute fdct using xN FFT
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    void execute();
 
-//     /*
-//      * Brief: Execute fdct using xN FFT
-//      * Parameter:
-//      *     None
-//      * Return:
-//      *     None
-//      */
-//     void execute();
+public:
+    InputList               inputSequence_xN;
+    std::vector<ComplexDFT> outputSequenceComplex;
+};
 
-// public:
-//     fft2::InputList inputSequence_xN;
-// };
+class ifdct: public Transform<double, double, double>
+{
+public:
+    /*
+     * Brief: Default constructor
+     * Parameter:
+     *     None
+     */
+    // fdct(): FastTransformBase2(), dct() {}
+    ifdct(): Transform() {}
+
+    /*
+     * Brief: Execute fdct using xN FFT
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    void execute();
+
+public:
+    std::vector<ComplexDFT> inputSequenceComplex;
+};
 
 template<typename InputType, typename OutputType>
 class Transform2D
@@ -490,6 +505,15 @@ public:
     }
 
     /*
+     * Brief: Execute transform
+     * Parameter:
+     *     None
+     * Return:
+     *     None
+     */
+    virtual void execute() = 0;
+
+    /*
      * Brief: Display transform result
      * Parameter:
      *     None
@@ -506,10 +530,10 @@ public:
 };
 
 template<typename TransformType1, typename TransformType2>
-class ft2D: public Transform2D<double, ComplexDFT>
+class ft2DTemplate: public Transform2D<double, ComplexDFT>
 {
 public:
-    ft2D() {}
+    ft2DTemplate() {}
 
     /*
      * Brief: Execute 2D ft
@@ -554,14 +578,14 @@ public:
         }
     }
 };
-typedef ft2D<  dftdouble,  dftComplex > dft2D;
-typedef ft2D< fft2double, fft2Complex > fft2D;
+typedef ft2DTemplate<  dftdouble,  dftComplex > dft2D;
+typedef ft2DTemplate< fft2double, fft2Complex > fft2D;
 
 template<typename TransformType1, typename TransformType2>
-class ift2D: public Transform2D<ComplexDFT, double>
+class ift2DTemplate: public Transform2D<ComplexDFT, double>
 {
 public:
-    ift2D() {}
+    ift2DTemplate() {}
 
     /*
      * Brief: Execute 2D ift
@@ -612,8 +636,8 @@ public:
         }
     }
 };
-typedef ift2D<  idftComplex,  idftdouble > idft2D;
-typedef ift2D< ifft2Complex, ifft2double > ifft2D;
+typedef ift2DTemplate<  idftComplex,  idftdouble > idft2D;
+typedef ift2DTemplate< ifft2Complex, ifft2double > ifft2D;
 
 template<typename TransformType>
 class dct2DTemplate: public Transform2D<double, double>

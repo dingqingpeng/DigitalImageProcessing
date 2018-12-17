@@ -113,8 +113,8 @@ void fftBlocks( const ImageBlockVector& originalData, ImageBlockVectorComplex& t
     {
         ftSingleBlock<fft2D>( originalData[i], oneBlockComplex );
         transformedData.push_back( oneBlockComplex );
-        if ( i == 0 )
-            findMaxAmpInBlock(oneBlockComplex);
+        // if ( i == 0 )
+        //     findMaxAmpInBlock(oneBlockComplex);
     }
 
     
@@ -195,6 +195,103 @@ void ifftBlocks( const ImageBlockVectorComplex& transformedData, ImageBlockVecto
         oneBlockBYTE.clear();
         iftSingleBlock<ifft2D>( transformedData[i], oneBlockBYTE );
         originalData.push_back( oneBlockBYTE );        
+    }
+
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+    std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>( t2-t1 );
+
+    if( printTimeConsumption )
+        std::cout << "-- Time consumption: " << time_used.count()*1000 << " ms" << std::endl;
+}
+
+template<typename TransformType>
+void dctSingleBlock( const ImageBlock& originalData, ImageBlockdouble& transformedData, bool shift ) 
+{
+    LONG rows = originalData.size();
+
+    // Type conversion
+    std::vector< std::vector<double> > originalDatadouble(rows);
+    for(LONG i = 0; i < rows; i++)
+        originalDatadouble[i].assign( originalData[i].begin(), originalData[i].end() );
+
+    // Shift
+    // if( shift )
+    //     for(LONG i = 0; i < rows; i++) {
+    //         for(LONG j = 0; j < rows; j++) {
+    //             originalDatadouble[i][j] *= pow(-1, i+j);
+    //         }
+    //     }
+    
+    // Implement ft
+    TransformType trans;
+    trans.setData( originalDatadouble );
+    trans.execute();
+    transformedData.assign( trans.outputGraph.begin(), trans.outputGraph.end() );
+}
+
+template<typename TransformType>
+void idctSingleBlock( const ImageBlockdouble& transformedData, ImageBlock& originalData, bool shift )
+{
+    LONG rows = transformedData.size();
+
+    // Implement ift
+    TransformType trans;
+    trans.setData( transformedData );
+    trans.execute();
+
+    // Shift back
+    // if( shift )
+    //     for(LONG i = 0; i < rows; i++) {
+    //         for(LONG j = 0; j < rows; j++) {
+    //             trans.outputGraph[i][j] *= pow(-1, i+j);
+    //         }
+    //     }
+    
+    // Type conversion
+    std::vector< BYTE > originalDataBYTE(rows);
+    for(LONG i = 0; i < rows; i++){
+        // originalDataBYTE.clear();
+        for(LONG j = 0; j < rows; j++) {
+            double current = trans.outputGraph[i][j];
+            originalDataBYTE[j] = (BYTE)( current + 0.5 );
+        }
+        originalData.push_back( originalDataBYTE );
+    }
+}
+
+void dctBlocks( const ImageBlockVector& originalData, ImageBlockVectordouble& transformedData, bool printTimeConsumption )
+{
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    ImageBlockdouble oneBlockdouble;
+    for(int i = 0; i < originalData.size(); i++)
+    {
+        dctSingleBlock<dct2D>( originalData[i], oneBlockdouble );
+        transformedData.push_back( oneBlockdouble );
+        // if ( i == 0 )
+        //     findMaxAmpInBlock(oneBlockdouble);
+    }
+
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+    std::chrono::duration<double> time_used = std::chrono::duration_cast<std::chrono::duration<double>>( t2-t1 );
+
+    if( printTimeConsumption )
+        std::cout << "-- Time consumption: " << time_used.count()*1000 << " ms" << std::endl;
+}
+
+void idctBlocks( const ImageBlockVectordouble& transformedData, ImageBlockVector& originalData, LONG keepCoeff, bool printTimeConsumption )
+{
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    ImageBlockBYTE oneBlockBYTE;
+    ImageBlockdouble oneBlockTransformedData;
+    for(int i = 0; i < transformedData.size(); i++)
+    // for(int i = 0; i < 1; i++)
+    {
+        oneBlockBYTE.clear();
+        oneBlockTransformedData.assign( transformedData[i].begin(), transformedData[i].end() );
+        zigzag( oneBlockTransformedData, keepCoeff );
+        // std::cout << oneBlockTransformedData << std::endl;
+        idctSingleBlock<idct2D>( oneBlockTransformedData, oneBlockBYTE );
+        originalData.push_back( oneBlockBYTE );   
     }
 
     std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
@@ -336,7 +433,7 @@ void findMaxAmpInBlock( ImageBlockComplex originalData )
         }
         
     }
-    std::cout << "pos = (" << posx << ", " << posy << std::endl;
+    // std::cout << "pos = (" << posx << ", " << posy << std::endl;
 }
 
 double findMaxInBlock( std::vector< std::vector<double> > originalData )
@@ -359,8 +456,8 @@ double findMaxInBlock( std::vector< std::vector<double> > originalData )
         }
         
     }
-    std::cout << "pos = (" << posx << ", " << posy << ")" << std::endl;
-    std::cout << "max = " << max << std::endl;
+    // std::cout << "pos = (" << posx << ", " << posy << ")" << std::endl;
+    // std::cout << "max = " << max << std::endl;
     return max;
 }
 
@@ -384,7 +481,63 @@ double findMinInBlock( std::vector< std::vector<double> > originalData )
         }
         
     }
-    std::cout << "pos = (" << posx << ", " << posy << ")" << std::endl;
-    std::cout << "min = " << min << std::endl;
+    // std::cout << "pos = (" << posx << ", " << posy << ")" << std::endl;
+    // std::cout << "min = " << min << std::endl;
     return min;
+}
+
+void zigzag( ImageBlockdouble& transformedData, LONG n )
+{
+    LONG dim = transformedData.size();
+    int i = 0, j = 0;
+    int counter = 0;
+
+    // Direction definition
+    // 1 -- Right
+    // 2 -- Left Down
+    // 3 -- Down
+    // 4 -- Right Up
+    int dir = 1;
+
+    while( counter < dim * dim )
+    {   
+        int index2 = i % dim;
+        int index3 = j % dim;
+        if ( counter >= n )
+            transformedData[ index2 ][ index3 ] = 0.0;
+        
+        switch (dir)
+        {
+            case 1:
+                j++;
+                if( i == 0 )        dir = 2;
+                if( i == dim - 1 )  dir = 4;
+                break;
+            case 2:
+                i++;
+                j--;
+                if( i == dim - 1 )  dir = 1;
+                else if( j == 0 )   dir = 3;
+                break;
+            case 3:
+                i++;
+                if( j == 0 )        dir = 4;
+                if( j == dim - 1 )  dir = 2;
+                break;
+            case 4:
+                i--;
+                j++;
+                if( j == dim - 1 )  dir = 3;
+                else if( i == 0 )   dir = 1;
+                break;
+            default:
+                break;
+        }
+
+        // std::cout << i << ", " << j << " | " << counter << std::endl;
+
+        
+
+        counter++;
+    }
 }
