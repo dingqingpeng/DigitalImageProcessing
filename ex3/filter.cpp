@@ -143,25 +143,55 @@ void meanFilter( const cv::Mat& in, cv::Mat& out, int kernelSize )
     }
 
     // Construct kernel
-    // double coeff = 1.0 / ( kernelSize * kernelSize - 1 );
-    int offset = kernelSize / 2;
-    // cv::Mat kernel( kernelSize, kernelSize, CV_64F );
-    // for(int i = 0; i < kernelSize; i++)
-    // {
-    //     for(int j = 0; j < kernelSize; j++)
-    //     {
-    //         if( i == offset && j == offset )
-    //         {
-    //             kernel.ptr<double>(i)[j] = 0.0;
-    //             continue;
-    //         }
-    //         kernel.ptr<double>(i)[j] = coeff;
-    //     }
-    // }
-
     Kernel kernel;
     kernel.mean( kernelSize );
 
+    int offset = kernelSize / 2;
+    out = in.clone();
+    cv::Mat part( kernelSize, kernelSize, CV_8UC1 );
+    int rows = in.rows;
+    int cols = in.cols;
+    for(int i = 0; i < rows; i++)
+    {
+        for(int j = 0; j < cols; j++)
+        {
+            // Construct image part
+            for(int s = 0; s < kernelSize; s++)
+            {
+                for(int t = 0; t < kernelSize; t++)
+                {
+                    int rowIndex = i - offset + s;
+                    int colIndex = j - offset + t;
+                    // Deal with boarders
+                    rowIndex = rowIndex <    0?    0: rowIndex;
+                    rowIndex = rowIndex > rows? rows: rowIndex;
+                    colIndex = colIndex <    0?    0: colIndex;
+                    colIndex = colIndex > cols? cols: colIndex;
+
+                    part.ptr<unsigned char>(s)[t] = in.ptr<unsigned char>( rowIndex )[ colIndex ];
+                }
+            }
+            // Compute convolution
+            out.ptr<unsigned char>(i)[j] = (unsigned char)( kernel.conv( part ) + 0.5 );
+        }
+    }
+}
+
+void GaussianFilter( const cv::Mat& in, cv::Mat& out, int kernelSize )
+{
+    // Dimension check
+    if( kernelSize % 2 == 0 )
+    {
+        std::cout << "Wrong kernel size." << std::endl;
+        return;
+    }
+
+    // Construct kernel
+    Kernel kernel;
+    kernel.Gaussian( kernelSize, 1.5 );
+
+    // Compute convolution with every pixel
+    int offset = kernelSize / 2;
     out = in.clone();
     cv::Mat part( kernelSize, kernelSize, CV_8UC1 );
     int rows = in.rows;
@@ -220,52 +250,66 @@ double PSNR( const cv::Mat img1, const cv::Mat img2 )
     return PSNR;
 }
 
-double MSSIM( const cv::Mat img1, const cv::Mat img2 )
+double SSIM( const cv::Mat& img1, const cv::Mat& img2 )
 {
-    ;
+    int rows = img1.rows;
+    int cols = img1.cols;
+    Kernel kernel;
+    kernel.Gaussian( 11, 1.5 );
+    
+    // Compute mius
+    double miu_x = kernel.conv( img1 );
+    double miu_y = kernel.conv( img2 );
+    // Compute error matrix
+    cv::Mat error_xSqr( rows, cols, CV_64F );
+    cv::Mat error_ySqr( rows, cols, CV_64F );
+    cv::Mat cor_xy( rows, cols, CV_64F );
+    for(int i = 0; i < rows; i++)
+    {
+        for(int j = 0; j < cols; j++)
+        {
+            double error_x = img1.ptr<unsigned char>(i)[j] - miu_x;
+            double error_y = img2.ptr<unsigned char>(i)[j] - miu_y;
+            error_xSqr.ptr<double>(i)[j] = error_x * error_x;
+            error_ySqr.ptr<double>(i)[j] = error_y * error_y;
+            cor_xy.ptr<double>(i)[j] = error_x * error_y;
+        }
+    }
+    // Compute sigmas
+    double sigma_x = sqrt( kernel.conv( error_xSqr ) );
+    double sigma_y = sqrt( kernel.conv( error_ySqr ) );
+    double sigma_xy = kernel.conv( cor_xy );
+    
+    // Compute SSIM
+    double K1 = 0.01;
+    double K2 = 0.02;
+    double  L = 255;
+    double C1 = K1 * L * K1 * L;
+    double C2 = K2 * L * K2 * L;
+    double SSIM = (2*miu_x*miu_y+C1) * (2*sigma_xy+C2) / ( (miu_x*miu_x+miu_y*miu_y+C1) * (sigma_x*sigma_x+sigma_y*sigma_y+C2) );
+
+    return SSIM;
 }
 
-void GaussianFilter( const cv::Mat& in, cv::Mat& out, int kernelSize )
+double MSSIM( const cv::Mat& img1, const cv::Mat& img2 )
 {
     // Dimension check
-    if( kernelSize % 2 == 0 )
+    if( img1.rows != img2.rows || img1.cols != img2.cols )
     {
-        std::cout << "Wrong kernel size." << std::endl;
-        return;
+        std::cout << "Image dimension dismatch." << std::endl;
+        return -1;
     }
     
-    // Compute Gaussian kernel
-    double sigma = 1.5;
-    double twiceSigmaSquare = 2.0 * sigma * sigma;
-    double GaussianCoeff = 1.0 / PI / twiceSigmaSquare;
-    double sum = 0.0;
+    // Set kernel size
+    // This is the same size as Gaussian kernel while computing SSIM.
+    int kernelSize = 11;
     int offset = kernelSize / 2;
-    cv::Mat kernel( kernelSize, kernelSize, CV_64F );
-    for(int i = 0; i < kernelSize; i++)
-    {
-        for(int j = 0; j < kernelSize; j++)
-        {
-            int x = i - offset;
-            int y = j - offset;
-            double exponent = -(double)( x*x + y*y ) / twiceSigmaSquare;
-            kernel.ptr<double>(i)[j] = GaussianCoeff * exp( exponent );
-            sum += kernel.ptr<double>(i)[j];
-        }
-    }
-    // Normalize
-    for(int i = 0; i < kernelSize; i++)
-    {
-        for(int j = 0; j < kernelSize; j++)
-        {
-            kernel.ptr<double>(i)[j] /= sum;
-        }
-    }
 
-    // Compute convolution with every pixel
-    out = in.clone();
-    cv::Mat part( kernelSize, kernelSize, CV_8UC1 );
-    int rows = in.rows;
-    int cols = in.cols;
+    cv::Mat part1( kernelSize, kernelSize, CV_8UC1 );
+    cv::Mat part2( kernelSize, kernelSize, CV_8UC1 );
+    int rows = img1.rows;
+    int cols = img1.cols;
+    double MSSIMValue = 0.0;
     for(int i = 0; i < rows; i++)
     {
         for(int j = 0; j < cols; j++)
@@ -283,11 +327,59 @@ void GaussianFilter( const cv::Mat& in, cv::Mat& out, int kernelSize )
                     colIndex = colIndex <    0?    0: colIndex;
                     colIndex = colIndex > cols? cols: colIndex;
 
-                    part.ptr<unsigned char>(s)[t] = in.ptr<unsigned char>( rowIndex )[ colIndex ];
+                    part1.ptr<unsigned char>(s)[t] = img1.ptr<unsigned char>( rowIndex )[ colIndex ];
+                    part2.ptr<unsigned char>(s)[t] = img2.ptr<unsigned char>( rowIndex )[ colIndex ];
                 }
             }
-            // Compute convolution
-            out.ptr<unsigned char>(i)[j] = (unsigned char)( conv( part, kernel ) + 0.5 );
+            // Compute SSIM
+            MSSIMValue += SSIM( part1, part2 );
+        }
+    }
+    MSSIMValue /= (double)( rows * cols );
+
+    return MSSIMValue;
+}
+
+void SobelEdge( const cv::Mat& img, cv::Mat& edgeImage )
+{
+    edgeImage = img.clone();
+    std::cout << edgeImage.rows << ", " << edgeImage.cols << std::endl;
+    
+    // Set kernel
+    Kernel kernel_x, kernel_y;
+    kernel_x.SobelOriental();
+    kernel_y.SobelVertial();
+
+    // Set kernel size
+    int kernelSize = 3;
+    int offset = kernelSize / 2;
+    
+    cv::Mat part( kernelSize, kernelSize, CV_8UC1 );
+    int rows = img.rows;
+    int cols = img.cols;
+    for(int i = 0; i < rows; i++)
+    {
+        for(int j = 0; j < cols; j++)
+        {
+            // Construct image part
+            for(int s = 0; s < kernelSize; s++)
+            {
+                for(int t = 0; t < kernelSize; t++)
+                {
+                    int rowIndex = i - offset + s;
+                    int colIndex = j - offset + t;
+                    // Deal with boarders
+                    rowIndex = rowIndex <    0?    0: rowIndex;
+                    rowIndex = rowIndex > rows? rows: rowIndex;
+                    colIndex = colIndex <    0?    0: colIndex;
+                    colIndex = colIndex > cols? cols: colIndex;
+
+                    part.ptr<unsigned char>(s)[t] = img.ptr<unsigned char>( rowIndex )[ colIndex ];
+                }
+            }
+            // Compute gradient value
+            double gradient = abs( kernel_x.conv( part ) ) + abs( kernel_y.conv( part ) );
+            edgeImage.ptr<unsigned char>(i)[j] = gradient > 125? 255: 0;
         }
     }
 }
