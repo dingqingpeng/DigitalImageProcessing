@@ -79,17 +79,18 @@ int main(int argc, char const *argv[])
     cout << "Done" << endl << endl;
 
     // 2.2 IDCT image blocks
-    for(int i = 0; i < 40; i++) {
     cout << "Implementing Inverse Discrete Cosine Transform..." << endl;
-    ImageBlockVector YBlocksReconstructed;
-    idctBlocks( Y_CosDomain, YBlocksReconstructed, int(blockSize*blockSize * (0.02*i)+0.5) );
-    cout << 0.02*i <<", " << int(blockSize*blockSize * (0.02*i)+0.5) << endl;
-    cout << "Done" << endl << endl;
+    for(int i = 0; i < 40; i++)
+    {
+        ImageBlockVector YBlocksReconstructed;
+        idctBlocks( Y_CosDomain, YBlocksReconstructed, int(blockSize*blockSize * (0.02*i)+0.5) , false );
+        cout << "--> percentage: " << 0.02*i <<", use first " << int(blockSize*blockSize * (0.02*i)+0.5) << " parameters" << endl;
+        // cout << "Done" << endl << endl;
 
-    cout << "Displaying reconstructed image..." << endl;
-    reconstructImage( YBlocksReconstructed, YBlockedSize );
-    cout << "Done" << endl << endl;
+        // cout << "Displaying reconstructed image..." << endl;
+        reconstructImage( YBlocksReconstructed, YBlockedSize, false );
     }
+    cout << "Done" << endl << endl;
 
     return 0;
 }

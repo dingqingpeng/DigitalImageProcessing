@@ -127,7 +127,7 @@ void extractComponent( ImageBlockVectorComplex& transformedData, ImageBlockVecto
  * Return:
  *     None
  */
-void reconstructImage( const ImageBlockVectorBYTE& reconstructedBlocks, BLOCKEDIMAGESIZE imageSize );
+void reconstructImage( const ImageBlockVectorBYTE& reconstructedBlocks, BLOCKEDIMAGESIZE imageSize, bool wait = true );
 
 void findMaxAmpInBlock( ImageBlockComplex originalData );
 double findMaxInBlock( std::vector< std::vector<double> > originalData );

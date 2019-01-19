@@ -14,7 +14,7 @@ include_directories(
 )
 
 # Add an executable file
-add_executable( ex3 ex3.cpp filter.cpp )
+add_executable( ex3 ex3.cpp filter.cpp CWavelet.cpp )
 target_link_libraries( ex3 
    ${OpenCV_LIBS}
 )

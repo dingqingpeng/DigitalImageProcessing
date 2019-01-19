@@ -357,7 +357,7 @@ void extractComponent( ImageBlockVectorComplex& transformedData, ImageBlockVecto
     }
 }
 
-void reconstructImage( const ImageBlockVectorBYTE& reconstructedBlocks, BLOCKEDIMAGESIZE imageSize )
+void reconstructImage( const ImageBlockVectorBYTE& reconstructedBlocks, BLOCKEDIMAGESIZE imageSize, bool wait )
 {
     int blockSize = reconstructedBlocks[0].size();
     LONG rows = blockSize * imageSize.rows;
@@ -381,8 +381,16 @@ void reconstructImage( const ImageBlockVectorBYTE& reconstructedBlocks, BLOCKEDI
             image.ptr<BYTE>(i)[j] = reconstructedBlocks[ index1 ][ index2 ][ index3 ];
         }
     }
+
     cv::imshow("Reconstructed image", image);
-    cv::waitKey(0);
+    if( wait )
+    {
+        cv::waitKey(0);
+    }
+    else
+    {
+        cv::waitKey(350);
+    }
 }
 
 void findMaxAmpInBlock( ImageBlockComplex originalData )

@@ -4,6 +4,7 @@
 #include <opencv2/highgui.hpp>
 #include <cmath>
 #include "filter.h"
+#include "CWavelet.h"
 
 #define PI 3.1415926
 
@@ -222,7 +223,7 @@ void GaussianFilter( const cv::Mat& in, cv::Mat& out, int kernelSize )
     }
 }
 
-double PSNR( const cv::Mat img1, const cv::Mat img2 )
+double PSNR( const cv::Mat& img1, const cv::Mat& img2 )
 {
     // Dimension check
     if( img1.rows != img2.rows || img1.cols != img2.cols )
@@ -283,10 +284,12 @@ double SSIM( const cv::Mat& img1, const cv::Mat& img2 )
     // Compute SSIM
     double K1 = 0.01;
     double K2 = 0.02;
-    double  L = 255;
+    double  L = 255.0;
     double C1 = K1 * L * K1 * L;
     double C2 = K2 * L * K2 * L;
-    double SSIM = (2*miu_x*miu_y+C1) * (2*sigma_xy+C2) / ( (miu_x*miu_x+miu_y*miu_y+C1) * (sigma_x*sigma_x+sigma_y*sigma_y+C2) );
+    double SSIM = (2*miu_x*miu_y+C1) * (2*sigma_x*sigma_y+C2) / ( (miu_x*miu_x+miu_y*miu_y+C1) * (sigma_x*sigma_x+sigma_y*sigma_y+C2) );
+
+    // std::cout << SSIM << ", " << std::endl;
 
     return SSIM;
 }
@@ -343,11 +346,10 @@ double MSSIM( const cv::Mat& img1, const cv::Mat& img2 )
 void SobelEdge( const cv::Mat& img, cv::Mat& edgeImage )
 {
     edgeImage = img.clone();
-    std::cout << edgeImage.rows << ", " << edgeImage.cols << std::endl;
     
     // Set kernel
     Kernel kernel_x, kernel_y;
-    kernel_x.SobelOriental();
+    kernel_x.SobelHorizontal();
     kernel_y.SobelVertial();
 
     // Set kernel size
@@ -382,4 +384,35 @@ void SobelEdge( const cv::Mat& img, cv::Mat& edgeImage )
             edgeImage.ptr<unsigned char>(i)[j] = gradient > 125? 255: 0;
         }
     }
+}
+
+void waveletFilter( const cv::Mat& in, cv::Mat& out )
+{
+    int height = in.rows;
+	int width  = in.cols;
+    int size   = height * width;
+
+    // Construct input sequence of DWT
+	double s[size];
+	for(size_t i = 0; i < size; i++)
+		s[i] = (double)in.ptr<unsigned char>(i / width)[i % width];
+    
+    // 2DWavelet filter
+    CWavelet cw;
+    int Scale = 3;
+	int dbn   = 3;
+	cw.InitDecInfo2D(height, width, Scale, dbn);
+	double *dstcoef = new double[size];
+	if (!cw.thrDenoise2D(s, dstcoef))
+		cerr << "Error" << endl;
+
+    // Reconstruct image
+	out = in.clone();
+	
+	for(size_t i = 0; i < height; i++)
+		for(size_t j = 0; j < width; j++)
+			out.ptr<unsigned char>(i)[j] = (unsigned char)dstcoef[ i * width + j ];
+
+    delete[] dstcoef;
+	dstcoef = NULL;
 }

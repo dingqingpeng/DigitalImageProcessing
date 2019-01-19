@@ -70,7 +70,7 @@ public:
         }
     }
 
-    void SobelOriental()
+    void SobelHorizontal()
     {
         _kernel = ( cv::Mat_<double>( 3, 3 ) <<
         -1, 0, 1,
@@ -223,3 +223,13 @@ double MSSIM( const cv::Mat& img1, const cv::Mat& img2 );
  *     None
  */
 void SobelEdge( const cv::Mat& img, cv::Mat& edgeImage );
+
+/* 
+ * Brief: Implement wavelet filter
+ * Parameter:
+ *     in -- source image
+ *     out -- filtered image
+ * Return:
+ *     None
+ */
+void waveletFilter( const cv::Mat& in, cv::Mat& out );
